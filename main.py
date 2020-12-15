@@ -5,9 +5,11 @@ from bs4 import BeautifulSoup
 
 USERNAME = '' # 这里填用户名
 PASSWORD = ''  # 这里填密码
-SCKEY = '' # 这里填Server酱的key，无需推送可不填 示例: SCU64664Tfb2052dc10382535c3dd19e48ba000fc5dacd6a5dc3f6
+SCKEY = '' # 这里填Server酱的key，无需推送可不填
 
 desp = '' # 不用动
+isFailed = False # 不用动
+
 
 def print_(info):
     print(info)
@@ -17,8 +19,7 @@ def print_(info):
 
 def login(username, password) -> (str, requests.session):
     headers = {
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
-                      "Chrome/83.0.4103.116 Safari/537.36",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36",
         "origin": "https://www.euserv.com",
         "host": "support.euserv.com"
     }
@@ -44,8 +45,7 @@ def get_servers(sess_id, session) -> {}:
     d = {}
     url = "https://85.31.185.123/index.iphp?sess_id=" + sess_id
     headers = {
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
-                      "Chrome/83.0.4103.116 Safari/537.36",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36",
         "origin": "https://www.euserv.com",
         "host": "support.euserv.com"
     }
@@ -65,8 +65,7 @@ def get_servers(sess_id, session) -> {}:
 def renew(sess_id, session, password, order_id) -> bool:
     url = "https://85.31.185.123/index.iphp"
     headers = {
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
-                      "Chrome/83.0.4103.116 Safari/537.36",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36",
         "Host": "support.euserv.com",
         "origin": "https://support.euserv.com",
         "Referer": "https://support.euserv.com/index.iphp"
@@ -102,54 +101,59 @@ def renew(sess_id, session, password, order_id) -> bool:
 
 
 def check(sess_id, session):
-    print_("Checking.......")
+    print_("........最终结果........")
     d = get_servers(sess_id, session)
     flag = True
     for key, val in d.items():
         if val:
             flag = False
-            print_("ServerID: %s Renew Failed!" % key)
+            print_("ServerID: %s 续期失败!" % key)
     if flag:
-        print_("ALL Work Done! Enjoy")
+        print_("全部完成！")
+    else:
+        isFailed = True
+
 
 def server_chan():
+    text = 'EUserv续费'
+    text += '失败' if isFailed else '成功'
     data = (
-    ('text', 'EUserv续费日志'),
-    ('desp', desp)
-)
+        ('text', text),
+        ('desp', desp)
+    )
     response = requests.post('https://sc.ftqq.com/' + SCKEY + '.send', data=data)
     if response.status_code != 200:
-        print('Server酱 推送失败')
+        print("Server酱 推送失败！")
     else:
-        print('Server酱 推送成功')
+        print("Server酱 推送成功！")
 
 
 def main_handler(event, context):
     if not USERNAME or not PASSWORD:
-        print_("你没有添加任何账户")
+        print_("你没有添加任何账户！")
         exit(1)
     user_list = USERNAME.strip().split()
     passwd_list = PASSWORD.strip().split()
     if len(user_list) != len(passwd_list):
-        print_("The number of usernames and passwords do not match!")
+        print_("用户名密码个数不匹配！")
         exit(1)
     for i in range(len(user_list)):
         print('*' * 30)
-        print_("正在续费第 %d 个账号" % (i + 1))
+        print_("正在续费第 %d 个账号..." % (i + 1))
         sessid, s = login(user_list[i], passwd_list[i])
         if sessid == '-1':
-            print_("第 %d 个账号登陆失败，请检查登录信息" % (i + 1))
+            print_("第 %d 个账号登陆失败，请检查登录信息!" % (i + 1))
             continue
         SERVERS = get_servers(sessid, s)
-        print_("检测到第 {} 个账号有 {} 台VPS，正在尝试续期".format(i + 1, len(SERVERS)))
+        print_("检测到第 {} 个账号有 {} 台VPS，正在尝试续期...".format(i + 1, len(SERVERS)))
         for k, v in SERVERS.items():
             if v:
                 if not renew(sessid, s, passwd_list[i], k):
-                    print_("ServerID: %s Renew Error!" % k)
+                    print_("ServerID: %s 续期失败！" % k)
                 else:
-                    print_("ServerID: %s has been successfully renewed!" % k)
+                    print_("ServerID: %s 续期成功！" % k)
             else:
-                print_("ServerID: %s does not need to be renewed" % k)
+                print_("ServerID: %s 无需续期！" % k)
         time.sleep(15)
         check(sessid, s)
         time.sleep(5)
