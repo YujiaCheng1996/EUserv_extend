@@ -101,21 +101,20 @@ def renew(sess_id, session, password, order_id) -> bool:
 
 
 def check(sess_id, session):
-    print_("........最终结果........")
+    print_("...复查结果...")
     d = get_servers(sess_id, session)
-    flag = True
+    global isFailed
     for key, val in d.items():
         if val:
-            flag = False
+            isFailed = True
             print_("ServerID: %s 续期失败!" % key)
-    if flag:
+    if isFailed == False:
         print_("全部完成！")
-    else:
-        isFailed = True
 
 
 def server_chan():
     text = 'EUserv续费'
+    global isFailed
     text += '失败' if isFailed else '成功'
     data = (
         ('text', text),
@@ -129,6 +128,7 @@ def server_chan():
 
 
 def main_handler(event, context):
+    isNeeded = False
     if not USERNAME or not PASSWORD:
         print_("你没有添加任何账户！")
         exit(1)
@@ -148,6 +148,7 @@ def main_handler(event, context):
         print_("检测到第 {} 个账号有 {} 台VPS，正在尝试续期...".format(i + 1, len(SERVERS)))
         for k, v in SERVERS.items():
             if v:
+                isNeeded = True
                 if not renew(sessid, s, passwd_list[i], k):
                     print_("ServerID: %s 续期失败！" % k)
                 else:
@@ -157,5 +158,5 @@ def main_handler(event, context):
         time.sleep(15)
         check(sessid, s)
         time.sleep(5)
-    SCKEY and server_chan()
+    SCKEY and isNeeded and server_chan()
     print('*' * 30)
