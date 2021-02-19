@@ -24,6 +24,11 @@ PushPlus_Token = ''
 # Bark https://github.com/Finb/Bark
 Bark_Url = '' # 这里填Bark服务器的URL，注意最后的/要保留 示例：https://api.day.app/yourkey/
 
+# Power Automate https://flow.microsoft.com/ 自行定义触发后的动作，可请求其它webhook或直接发邮件
+PowerAutomate_Url = '' # 设置“当收到 HTTP 请求时”触发器后自动生成的“HTTP POST URL” 示例：https://prod-09.southeastasia.logic.azure.com:443/workflows/xxxxxxx/triggers/manual/paths/invoke?api-version=xxxxxxxx
+PowerAutomate_Json = {"title": "", "body": "", "automaticallyCopy": 0, "isArchive": 1, "sound": "horn"} # 设置“当收到 HTTP 请求时”触发器时定义的“请求正文 JSON 架构”，请自定义，并需同时修改后面def PowerAutomate():里的代码，此处以Bark的参数为例
+
+
 desp = '' # 不用动
 isFailed = False # 不用动
 
@@ -150,7 +155,7 @@ def CoolPush():
     c = 'EUserv续费'
     global isFailed
     c += '失败' if isFailed else '成功'
-    c += '日志\n\n' + desp
+    c += '\n\n' + desp
     data = json.dumps({'c': c})
     url = 'https://push.xuthus.cc/' + CoolPush_MODE + '/' + CoolPush_Skey
     response = requests.post(url, data=data)
@@ -183,12 +188,26 @@ def Bark():
     title = 'EUserv续费'
     global isFailed
     title += '失败' if isFailed else '成功'
-    content = urllib.parse.quote_plus(desp)
-    response = requests.get(Bark_Url + title + '/' + content)
+    body = urllib.parse.quote_plus(desp.replace('\n\n', '\n'))
+    response = requests.get(Bark_Url + title + '/' + body)
     if response.status_code != 200:
         print("Bark 推送失败！")
     else:
         print("Bark 推送成功！")
+
+
+# Power Automate https://flow.microsoft.com/ 自行定义触发后的动作，可请求其它webhook或直接发邮件
+def PowerAutomate():
+    title = 'EUserv续费'
+    global isFailed
+    title += '失败' if isFailed else '成功'
+    PowerAutomate_Json['title'] = title
+    PowerAutomate_Json['body'] = desp.replace('\n\n', '\n')
+    response = requests.post(PowerAutomate_Url, json=PowerAutomate_Json)
+    if response.status_code != 200:
+        print("PowerAutomate 推送失败！")
+    else:
+        print("PowerAutomate 推送成功！")
 
 
 def main_handler(event, context):
@@ -223,11 +242,13 @@ def main_handler(event, context):
         check(sessid, s)
         time.sleep(5)
 
-    
-    # 三个通知渠道至少选取一个
-    SCKEY and isNeeded and server_chan()
-    CoolPush_MODE and isNeeded and CoolPush_Skey and CoolPush()
-    PushPlus_Token and isNeeded and PushPlus()
-    Bark_Url and isNeeded and Bark()
-    
+
+    # 5个通知渠道至少选取1个
+    if isNeeded:
+        SCKEY and server_chan()
+        CoolPush_MODE  and CoolPush_Skey and CoolPush()
+        PushPlus_Token and PushPlus()
+        Bark_Url and Bark()
+        PowerAutomate_Url and PowerAutomate_Json and PowerAutomate()
+
     print('*' * 30)
