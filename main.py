@@ -1,11 +1,28 @@
+# -*- coding: utf8 -*-
 import json
 import time
 import requests
+import urllib.parse
 from bs4 import BeautifulSoup
 
-USERNAME = '' # 这里填用户名
+# 强烈建议部署在非大陆区域，例如HK、SG等
+
+USERNAME = '' # 这里填用户名，邮箱也可
 PASSWORD = ''  # 这里填密码
-SCKEY = '' # 这里填Server酱的key，无需推送可不填
+
+# Server酱 http://sc.ftqq.com/?c=code
+SCKEY = '' # 这里填Server酱的key，无需推送可不填 示例: SCU646xxxxxxxxdacd6a5dc3f6
+
+# 酷推 https://cp.xuthus.cc
+CoolPush_Skey = ''
+# 通知类型 CoolPush_MODE的可选项有（默认send）：send[QQ私聊]、group[QQ群聊]、wx[个微]、ww[企微]
+CoolPush_MODE = 'send'
+
+# PushPlus https://pushplus.hxtrip.com/message
+PushPlus_Token = ''
+
+# Bark https://github.com/Finb/Bark
+Bark_Url = '' # 这里填Bark服务器的URL，注意最后的/要保留 示例：https://api.day.app/yourkey/
 
 desp = '' # 不用动
 isFailed = False # 不用动
@@ -19,7 +36,7 @@ def print_(info):
 
 def login(username, password) -> (str, requests.session):
     headers = {
-        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_2_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.182 Safari/537.36",
         "origin": "https://www.euserv.com",
         "host": "support.euserv.com"
     }
@@ -30,7 +47,7 @@ def login(username, password) -> (str, requests.session):
         "Submit": "Login",
         "subaction": "login"
     }
-    url = "https://85.31.185.123/index.iphp"
+    url = "https://support.euserv.com/index.iphp"
     session = requests.Session()
     f = session.post(url, headers=headers, data=login_data, verify=False)
     f.raise_for_status()
@@ -43,9 +60,9 @@ def login(username, password) -> (str, requests.session):
 
 def get_servers(sess_id, session) -> {}:
     d = {}
-    url = "https://85.31.185.123/index.iphp?sess_id=" + sess_id
+    url = "https://support.euserv.com/index.iphp?sess_id=" + sess_id
     headers = {
-        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_2_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.182 Safari/537.36",
         "origin": "https://www.euserv.com",
         "host": "support.euserv.com"
     }
@@ -63,9 +80,9 @@ def get_servers(sess_id, session) -> {}:
 
 
 def renew(sess_id, session, password, order_id) -> bool:
-    url = "https://85.31.185.123/index.iphp"
+    url = "https://support.euserv.com/index.iphp"
     headers = {
-        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_2_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.182 Safari/537.36",
         "Host": "support.euserv.com",
         "origin": "https://support.euserv.com",
         "Referer": "https://support.euserv.com/index.iphp"
@@ -112,6 +129,7 @@ def check(sess_id, session):
         print_("全部完成！")
 
 
+# Server酱 http://sc.ftqq.com/?c=code
 def server_chan():
     text = 'EUserv续费'
     global isFailed
@@ -125,6 +143,52 @@ def server_chan():
         print("Server酱 推送失败！")
     else:
         print("Server酱 推送成功！")
+
+
+# 酷推 https://cp.xuthus.cc/
+def CoolPush():
+    c = 'EUserv续费'
+    global isFailed
+    c += '失败' if isFailed else '成功'
+    c += '日志\n\n' + desp
+    data = json.dumps({'c': c})
+    url = 'https://push.xuthus.cc/' + CoolPush_MODE + '/' + CoolPush_Skey
+    response = requests.post(url, data=data)
+    if response.status_code != 200:
+        print('酷推 推送失败')
+    else:
+        print('酷推 推送成功')
+
+
+# PushPlus https://pushplus.hxtrip.com/message
+def PushPlus():
+    title = 'EUserv续费'
+    global isFailed
+    title += '失败' if isFailed else '成功'
+    data = (
+        ('token', PushPlus_Token),
+        ('title', title),
+        ('content', desp)
+    )
+    url = 'http://pushplus.hxtrip.com/send'
+    response = requests.post(url, data=data)
+    if response.status_code != 200:
+        print('PushPlus 推送失败')
+    else:
+        print('PushPlus 推送成功')
+
+
+# Bark https://github.com/Finb/Bark
+def Bark():
+    title = 'EUserv续费'
+    global isFailed
+    title += '失败' if isFailed else '成功'
+    content = urllib.parse.quote_plus(desp)
+    response = requests.get(Bark_Url + title + '/' + content)
+    if response.status_code != 200:
+        print("Bark 推送失败！")
+    else:
+        print("Bark 推送成功！")
 
 
 def main_handler(event, context):
@@ -158,5 +222,12 @@ def main_handler(event, context):
         time.sleep(15)
         check(sessid, s)
         time.sleep(5)
+
+    
+    # 三个通知渠道至少选取一个
     SCKEY and isNeeded and server_chan()
+    CoolPush_MODE and isNeeded and CoolPush_Skey and CoolPush()
+    PushPlus_Token and isNeeded and PushPlus()
+    Bark_Url and isNeeded and Bark()
+    
     print('*' * 30)
